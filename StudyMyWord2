@@ -1,0 +1,1162 @@
+//
+//  ScriptureMasteryViewController.m
+//  SnIToolKit
+//
+//  Created by Wagstaff, Dean on 1/14/13.
+//  Copyright (c) 2013 Wagstaff, Dean. All rights reserved.
+//
+
+#import "ScriptureMasteryViewController.h"
+#import "ConcentrationViewController.h"
+#import "SnI_XMLParser.h"
+#import <QuartzCore/QuartzCore.h>
+#import "CourseOfStudyViewController.h"
+#import "SearchIndexViewController.h"
+#import "DataModelHandler.h"
+#import "MoreSplitViewController.h"
+#import "SMPassOffTrackerViewController.h"
+#import "QuizViewController.h"
+#import "Common.h"
+
+@interface ScriptureMasteryViewController ()
+@property (nonatomic, strong) IBOutlet UIBarButtonItem *memorizationBarButtonItem;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem *concentrationBarButtonItem;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem *progressBarButtonItem;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem *quizBarButtonItem;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem *moreBarButtonItem;
+@property (nonatomic, strong) UIView *scriptureLayoutView;
+@property (nonatomic, strong) IBOutlet UIButton *restoreScriptureButton;
+@property (nonatomic, strong) CourseOfStudyViewController *courseOfStudyViewController;
+@property (nonatomic, strong) SearchIndexViewController *searchIndexViewController;
+@property (nonatomic, strong) NSMutableArray *viewArray;
+@property (nonatomic, strong) NSMutableArray *layerArray;
+@property (nonatomic, strong) UIButton *layerButton;
+@property (nonatomic, strong) SnI_XMLParser *parser;
+@property (nonatomic, strong) CATextLayer *label;
+@property (nonatomic, strong) ConcentrationViewController  *concentrationViewController;
+@property (nonatomic, strong) MoreSplitViewController *moreViewController;
+@property (nonatomic, strong) SMPassOffTrackerViewController *smPassOffTrackerViewController;
+@property (nonatomic, strong) QuizViewController *quizViewController;
+@property (nonatomic, strong) IBOutlet UILabel *smCurrentCourseOfStudyLabel;
+@property (nonatomic, strong) UIPopoverController *courseOfStudyPopoverController;
+@property (nonatomic, strong) UIPopoverController *searchPopoverController;
+@property (nonatomic, strong) UILabel *titleLabel;
+@property (nonatomic, strong) IBOutlet UIToolbar *topScriptureMasteryToolbarWithItems;
+@property (nonatomic, strong) IBOutlet UIToolbar *topScriptureMasteryToolbarWithoutItems;
+@property (nonatomic, strong) IBOutlet UIToolbar *bottomScriptureMasteryToolbarWithItems;
+@property (nonatomic, strong) IBOutlet UIImageView *scriptureMasteryCourseOfStudyDashboardImageView;
+@property (nonatomic, strong) UIButton *bookOfMormonButton;
+@property (nonatomic, strong) UIButton *doctrineNCovenantsButton;
+@property (nonatomic, strong) UIButton *oldTestamentButton;
+@property (nonatomic, strong) UIButton *knewTestamentButton;
+@property (nonatomic, strong) UIImageView *eraserImageView;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem *backBarButtonItem;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem *versesBarButtonItem;
+@property (nonatomic, strong) UIView *eraserCoverUpView;
+@property (nonatomic, unsafe_unretained) CGRect eraserLandRect;
+@property (nonatomic, unsafe_unretained) CGRect eraserPortRect;
+@property (nonatomic, strong) NSMutableString *course;
+@property (nonatomic, strong) UIScrollView *mainScrollView;
+@property (nonatomic, strong) NSMutableString *language;
+@property (nonatomic, strong) IBOutlet UIButton *verseButton;
+@property (nonatomic, strong) NSMutableString *fileName;
+@property (nonatomic, unsafe_unretained) NSInteger mainScreenWidth;
+@property (nonatomic, unsafe_unretained) BOOL cosSelected;
+@property (nonatomic, unsafe_unretained) NSInteger mainScreenHeight;
+@end
+
+@implementation ScriptureMasteryViewController
+@synthesize scriptureLayoutView;
+@synthesize courseOfStudyViewController;
+@synthesize restoreScriptureButton;
+@synthesize layerArray;
+@synthesize viewArray;
+@synthesize label;
+@synthesize layerButton;
+@synthesize courseOfStudyPopoverController;
+@synthesize parser;
+@synthesize searchIndexViewController;
+@synthesize searchPopoverController;
+@synthesize concentrationViewController;
+@synthesize moreViewController;
+@synthesize smPassOffTrackerViewController;
+@synthesize smCurrentCourseOfStudyLabel;
+@synthesize titleLabel;
+@synthesize bookOfMormonButton;
+@synthesize doctrineNCovenantsButton;
+@synthesize oldTestamentButton;
+@synthesize knewTestamentButton;
+@synthesize scriptureMasteryCourseOfStudyDashboardImageView;
+@synthesize topScriptureMasteryToolbarWithItems;
+@synthesize topScriptureMasteryToolbarWithoutItems;
+@synthesize eraserImageView;
+@synthesize backBarButtonItem;
+@synthesize eraserCoverUpView;
+@synthesize eraserLandRect;
+@synthesize eraserPortRect;
+@synthesize course;
+@synthesize mainScrollView;
+@synthesize quizViewController;
+@synthesize language;
+@synthesize verseButton;
+@synthesize memorizationBarButtonItem;
+@synthesize concentrationBarButtonItem;
+@synthesize progressBarButtonItem;
+@synthesize quizBarButtonItem;
+@synthesize moreBarButtonItem;
+@synthesize fileName;
+@synthesize mainScreenHeight;
+@synthesize mainScreenWidth;
+@synthesize bottomScriptureMasteryToolbarWithItems;
+@synthesize cosSelected;
+@synthesize versesBarButtonItem;
+
+UISwipeGestureRecognizer *swipeLeftRecognizer, *swipeRightRecognizer;
+BOOL showSearchPopoverSelected;
+NSMutableArray *scriptureVerses;
+NSInteger currentViewIndex;
+static NSMutableArray *allChapterVerses;
+static NSMutableArray *allChapterVerseHeadings;
+UIImageView *animationImageView;
+BOOL fromPort,fromLand;
+NSMutableArray *missingWordArray;
+BOOL fromConcentration;
+NSArray *words;
+NSArray *chapterAndVerses;
+NSDictionary *plistDataDict;
+NSString *joinWatchersMessageOnce;
+NSInteger curIndex;
+NSString *defaultFilename;
+UIAlertView *alert;
+NSMutableString *currentChapterVerse;
+NSMutableString *englishFileNameVersion;
+NSMutableString *spanishFileNameVersion;
+NSMutableString *portugueseFileNameVersion;
+NSInteger portXPos;
+NSInteger landXPos;
+NSInteger portBtnWidth;
+NSInteger landBtnWidth;
+BOOL showCourseOfStudyButtons;
+BOOL fromRotate;
+
+-(BOOL)shouldAutorotate {
+    return YES;
+}
+
+- (void) dealloc {
+    courseOfStudyViewController = nil;
+    searchIndexViewController = nil;
+
+    if (viewArray != nil) {
+        viewArray = nil;
+    }
+    
+    if (layerArray != nil) {
+        layerArray = nil;
+    }
+
+    layerButton = nil;
+}
+
+- (void) viewWillAppear:(BOOL)animated {
+   UIInterfaceOrientation orientation = [[UIDevice currentDevice] orientation];
+    
+     if ((UIInterfaceOrientationIsLandscape([[UIApplication sharedApplication] statusBarOrientation]))|(orientation == UIInterfaceOrientationLandscapeLeft)) {
+        fromLand = YES; 
+        fromPort = NO;
+    }
+     else {
+         fromLand = NO;
+         fromPort = YES;
+     }    
+}
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil {
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+        eraserLandRect          = CGRectMake(630, 530, kEraserWidth, kEraserHeight);
+        eraserPortRect          = CGRectMake(525, 735, kEraserWidth, kEraserHeight);
+        
+        portXPos = 29;
+        portBtnWidth = 712;
+        landXPos = 55;
+        landBtnWidth = 912;
+        
+        language = [NSMutableString stringWithString:[LocalizedHelper savedLanguageFromPlist]];
+    }
+    
+    return self;
+}
+
+- (void) createWipeOffBoardWithTray:(BOOL)showCourseOfStudyButtons {
+    if (showCourseOfStudyButtons) {
+        [self.view addSubview:bookOfMormonButton];
+        [self.view addSubview:doctrineNCovenantsButton];
+        [self.view addSubview:oldTestamentButton];
+        [self.view addSubview:knewTestamentButton];
+    }
+    else {
+        [bookOfMormonButton         setHidden:YES];
+        [doctrineNCovenantsButton   setHidden:YES];
+        [oldTestamentButton         setHidden:YES];
+        [knewTestamentButton        setHidden:YES];
+    }
+}
+
+- (void)viewDidLoad {
+    mainScreenWidth     = [[UIScreen mainScreen]bounds].size.width;
+    mainScreenHeight    = [[UIScreen mainScreen]bounds].size.height;
+    
+    showCourseOfStudyButtons = YES;
+    
+    fromRotate = NO;
+    
+    [backBarButtonItem setTitle:[LocalizedHelper languageSelectedStringForKey:@"concentBackBtnTitle"]];
+    
+    [memorizationBarButtonItem setTitle:[LocalizedHelper languageSelectedStringForKey:@"memBarBtnItem"]];
+    [concentrationBarButtonItem setTitle:[LocalizedHelper languageSelectedStringForKey:@"conBarBtnItem"]];
+    [progressBarButtonItem setTitle:[LocalizedHelper languageSelectedStringForKey:@"progBarBtnItem"]];
+    [quizBarButtonItem setTitle:[LocalizedHelper languageSelectedStringForKey:@"quizBarBtnItem"]];
+    [moreBarButtonItem setTitle:[LocalizedHelper languageSelectedStringForKey:@"moreBarBtnItem"]];
+        
+    [restoreScriptureButton setTitle:[LocalizedHelper languageSelectedStringForKey:@"concentRestoreBtnTitle"] forState:UIControlStateNormal];
+    
+    [verseButton setTitle:[LocalizedHelper languageSelectedStringForKey:@"concentRestoreBtnTitle"] forState:UIControlStateNormal];
+    
+    [smCurrentCourseOfStudyLabel setText:[LocalizedHelper languageSelectedStringForKey:@"memCourseOfStudy"]];
+    
+    bookOfMormonButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    bookOfMormonButton.layer.borderColor = [UIColor clearColor].CGColor;
+    bookOfMormonButton.layer.borderWidth = 2.0;
+    [bookOfMormonButton setTitle:[LocalizedHelper languageSelectedStringForKey:@"memBOMLabel"] forState:UIControlStateNormal];
+    [bookOfMormonButton setTitleColor:[UIColor blueColor] forState:UIControlStateNormal];
+    bookOfMormonButton.titleLabel.font = [UIFont fontWithName:@"MarkerFelt-Thin" size:70];
+    [bookOfMormonButton setBackgroundImage:[UIImage imageNamed:@"wipeOffBrnBtnBackground.png"] forState:UIControlStateNormal];
+    [bookOfMormonButton addTarget:self action:@selector(cosBtnPressed:) forControlEvents:UIControlEventTouchUpInside];
+    [bookOfMormonButton setTag:0];
+    [bookOfMormonButton showsTouchWhenHighlighted];
+    
+    doctrineNCovenantsButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    doctrineNCovenantsButton.layer.borderColor = [UIColor clearColor].CGColor;
+    doctrineNCovenantsButton.layer.borderWidth = 2.0;
+    [doctrineNCovenantsButton setTitle:[LocalizedHelper languageSelectedStringForKey:@"memDnCLabel"] forState:UIControlStateNormal];
+    [doctrineNCovenantsButton setTitleColor:[UIColor blueColor] forState:UIControlStateNormal];
+    doctrineNCovenantsButton.titleLabel.font = [UIFont fontWithName:@"MarkerFelt-Thin" size:70];
+    [doctrineNCovenantsButton setBackgroundImage:[UIImage imageNamed:@"wipeOffBrnBtnBackground.png"] forState:UIControlStateNormal];
+    [doctrineNCovenantsButton addTarget:self action:@selector(cosBtnPressed:) forControlEvents:UIControlEventTouchUpInside];
+    [doctrineNCovenantsButton setTag:1];
+    [doctrineNCovenantsButton showsTouchWhenHighlighted];
+    
+    oldTestamentButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    oldTestamentButton.layer.borderColor = [UIColor clearColor].CGColor;
+    oldTestamentButton.layer.borderWidth = 2.0;
+    [oldTestamentButton setTitle:[LocalizedHelper languageSelectedStringForKey:@"memOtLabel"] forState:UIControlStateNormal];
+    [oldTestamentButton setTitleColor:[UIColor blueColor] forState:UIControlStateNormal];
+    oldTestamentButton.titleLabel.font = [UIFont fontWithName:@"MarkerFelt-Thin" size:70];
+    [oldTestamentButton setBackgroundImage:[UIImage imageNamed:@"wipeOffBrnBtnBackground.png"] forState:UIControlStateNormal];
+    [oldTestamentButton addTarget:self action:@selector(cosBtnPressed:) forControlEvents:UIControlEventTouchUpInside];
+    [oldTestamentButton setTag:2];
+    [oldTestamentButton showsTouchWhenHighlighted];
+    
+    knewTestamentButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    knewTestamentButton.layer.borderColor = [UIColor clearColor].CGColor;
+    knewTestamentButton.layer.borderWidth = 2.0;
+    [knewTestamentButton setTitle:[LocalizedHelper languageSelectedStringForKey:@"memNtLabel"] forState:UIControlStateNormal];
+    [knewTestamentButton setTitleColor:[UIColor blueColor] forState:UIControlStateNormal];
+    knewTestamentButton.titleLabel.font = [UIFont fontWithName:@"MarkerFelt-Thin" size:70];
+    [knewTestamentButton setBackgroundImage:[UIImage imageNamed:@"wipeOffBrnBtnBackground.png"] forState:UIControlStateNormal];
+    [knewTestamentButton addTarget:self action:@selector(cosBtnPressed:) forControlEvents:UIControlEventTouchUpInside];
+    [knewTestamentButton setTag:3];
+    [knewTestamentButton showsTouchWhenHighlighted];
+    
+    course = [NSMutableString stringWithString:@"No Course Currently Selected"];
+    
+    [self createWipeOffBoardWithTray:showCourseOfStudyButtons];
+                
+    topScriptureMasteryToolbarWithItems.hidden = YES;
+    
+    eraserImageView = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"EraserButtonImageHorz.png"]];
+
+    if (UIInterfaceOrientationIsLandscape([[UIApplication sharedApplication] statusBarOrientation])) {
+        fromLand = YES;
+        fromPort = NO;
+        
+        bookOfMormonButton.frame = CGRectMake(29, kBookOfMormonButtonYPosLand, 712, 65);
+        doctrineNCovenantsButton.frame = CGRectMake(29, kDoctrineNCovenantsButtonYPosLand, 712, 65);
+        oldTestamentButton.frame = CGRectMake(29, kOldTestamentButtonYPosLand, 712, 65);
+        knewTestamentButton.frame = CGRectMake(29, kNewTestamentButtonYPosLand, 712, 65);
+        
+        if (fromConcentration) {
+            [self layoutSMDashboardForPort];
+        }
+        else {
+            [self layoutSMDashboardForLand];
+        }        
+    }
+    else {  // portrait
+        fromLand = NO;
+        fromPort = YES;
+        
+        bookOfMormonButton.frame = CGRectMake(29, kBookOfMormonButtonYPos, 712, 65);
+        doctrineNCovenantsButton.frame = CGRectMake(29, kDoctrineNCovenantsButtonYPos, 712, 65);
+        oldTestamentButton.frame = CGRectMake(29, kOldTestamentButtonYPos, 712, 65);
+        knewTestamentButton.frame = CGRectMake(29, kNewTestamentButtonYPos, 712, 65);
+        
+        if (fromConcentration) {
+            [self layoutSMDashboardForLand];
+        }
+        else {
+            [self layoutSMDashboardForPort];
+        }
+    }
+    
+    [self.view addSubview:bookOfMormonButton];
+    [self.view addSubview:doctrineNCovenantsButton];
+    [self.view addSubview:oldTestamentButton];
+    [self.view addSubview:knewTestamentButton];
+    
+    [self.view addSubview:eraserImageView];
+}
+
+- (NSMutableString *)focusSelectedCourse:(NSMutableString *)string {
+    return [[NSMutableString alloc]initWithString:string];
+}
+
+- (void)createScrollView:(UIInterfaceOrientation)orientation {
+    if (mainScrollView) {
+        [mainScrollView removeFromSuperview];
+    }
+    
+    if (isLandscape) {
+        if (fromConcentration) {
+            mainScrollView = [[UIScrollView alloc]initWithFrame:CGRectMake(36, 272, 670, 440)];
+        }
+        else {
+            mainScrollView = [[UIScrollView alloc]initWithFrame:CGRectMake(70, 230, 900, 300)];
+        }
+    }
+    else {  // portrait
+        if (fromConcentration) {
+            mainScrollView = [[UIScrollView alloc]initWithFrame:CGRectMake(56, 160, 800, 440)];
+        }
+        else {
+            mainScrollView = [[UIScrollView alloc]initWithFrame:CGRectMake(56, 300, 656, 440)];
+        }
+    }
+    
+    [mainScrollView setContentSize:CGSizeMake(mainScrollView.frame.size.width, 2048)];
+}
+
+- (void) cosBtnPressed:(id)sender {
+    CGFloat yPos = 0;
+    
+    cosSelected = YES;
+    
+    showCourseOfStudyButtons = NO;
+        
+    [self createScrollView:[[UIDevice currentDevice] orientation]];
+    
+    fromRotate = NO;
+    
+    switch ([sender tag]) {
+        case 0:
+            yPos = bookOfMormonButton.frame.origin.y;
+            englishFileNameVersion      = [[NSMutableString alloc]initWithString:@"BMSM"];
+            spanishFileNameVersion      = [[NSMutableString alloc]initWithString:@"BMSMSPAN"];
+            portugueseFileNameVersion   = [[NSMutableString alloc]initWithString:@"BMSMPORT"];
+            break;
+        case 1:
+            yPos = doctrineNCovenantsButton.frame.origin.y;
+            englishFileNameVersion      = [[NSMutableString alloc]initWithString:@"DCSM"];
+            spanishFileNameVersion      = [[NSMutableString alloc]initWithString:@"DCSMSPAN"];
+            portugueseFileNameVersion   = [[NSMutableString alloc]initWithString:@"DCSMPORT"];
+            break;
+        case 2:
+            yPos = oldTestamentButton.frame.origin.y;
+            englishFileNameVersion      = [[NSMutableString alloc]initWithString:@"OTSM"];
+            spanishFileNameVersion      = [[NSMutableString alloc]initWithString:@"OTSMSPAN"];
+            portugueseFileNameVersion   = [[NSMutableString alloc]initWithString:@"OTSMPORT"];
+            break;
+        case 3:
+            yPos = knewTestamentButton.frame.origin.y;
+            englishFileNameVersion      = [[NSMutableString alloc]initWithString:@"NTSM"];
+            spanishFileNameVersion      = [[NSMutableString alloc]initWithString:@"NTSMSPAN"];
+            portugueseFileNameVersion   = [[NSMutableString alloc]initWithString:@"NTSMPORT"];
+            break;
+        default:
+            break;
+    }
+    
+    CGFloat xPos;
+    
+    if (UIInterfaceOrientationIsLandscape([[UIApplication sharedApplication] statusBarOrientation])) {
+        xPos = 800;
+    }
+    else {
+        xPos = eraserImageView.frame.origin.x + 80;
+    }
+    
+    eraserImageView.frame = CGRectMake(eraserImageView.frame.origin.x + eraserImageView.frame.size.width, eraserImageView.frame.origin.y - eraserImageView.frame.size.height, 50, 125);
+    
+    [UIView beginAnimations:nil context:nil];
+    [UIView setAnimationDuration:1.0f];
+    [eraserImageView setImage:[UIImage imageNamed:@"EraserButtonImageVert.png"]];
+    eraserImageView.frame = CGRectMake(xPos, yPos, 50, 125);
+    
+    if (UIInterfaceOrientationIsLandscape([[UIApplication sharedApplication] statusBarOrientation])) {
+        eraserCoverUpView = [[UIView alloc]initWithFrame:CGRectMake(800, yPos - (125/6.5), 50, 125)];
+    }
+    else
+        eraserCoverUpView = [[UIView alloc]initWithFrame:CGRectMake(691, yPos - (125/4.25), 50, 125)];
+    
+    [eraserCoverUpView setAlpha:1.0];
+    
+    [scriptureMasteryCourseOfStudyDashboardImageView addSubview:eraserCoverUpView];
+    
+    [UIView commitAnimations];
+    
+    [UIView commitAnimations];
+    [UIView animateWithDuration: 1
+                          delay: 0
+                        options: UIViewAnimationCurveEaseInOut
+                     animations:^{
+                         CGFloat animationDuration = 1.5f;
+                         
+                         eraserCoverUpView.backgroundColor = [UIColor whiteColor];
+                         
+                         if (UIInterfaceOrientationIsLandscape([[UIApplication sharedApplication] statusBarOrientation])) {
+                             eraserImageView.frame = CGRectMake(xPos, yPos - (125/6.25), 50, 125);
+                             eraserCoverUpView.frame = CGRectMake(800, eraserImageView.frame.origin.y - 37, 50, 125);
+                         }
+                         else {
+                             eraserImageView.frame = CGRectMake(xPos, yPos - (125/4.25), 50, 125);
+                             eraserCoverUpView.frame = CGRectMake(671, eraserImageView.frame.origin.y - 37, 50, 125);
+                         }
+                         
+                         [UIView beginAnimations:nil context:nil];
+                         [UIView setAnimationDuration:animationDuration];
+                         [eraserImageView setAlpha:1.0];
+                         eraserImageView.frame = CGRectMake(20, eraserImageView.frame.origin.y, 50, 125);
+                         
+                         if (UIInterfaceOrientationIsLandscape([[UIApplication sharedApplication] statusBarOrientation])) {
+                             eraserCoverUpView.frame = CGRectMake(20, eraserCoverUpView.frame.origin.y, 850, 125);
+                         }
+                         else
+                             eraserCoverUpView.frame = CGRectMake(50, eraserCoverUpView.frame.origin.y, 671, 125);
+                         
+                         eraserCoverUpView.alpha = 1.0;
+                         topScriptureMasteryToolbarWithItems.hidden              = NO;
+                         topScriptureMasteryToolbarWithoutItems.hidden           = YES;
+                         bookOfMormonButton.alpha                                = 0.0;
+                         doctrineNCovenantsButton.alpha                          = 0.0;
+                         oldTestamentButton.alpha                                = 0.0;
+                         knewTestamentButton.alpha                               = 0.0;
+                         [UIView commitAnimations];
+                     }
+                     completion:^(BOOL finished){
+                         plistDataDict = [DataModelHandler plistData:[DataModelHandler dataFilePath:@"Parameters"]];
+                         
+                         if (plistDataDict) {
+                             fileName = [[NSMutableString alloc]initWithString:[self courseOfStudyFileName]];
+                             
+                             if ([language isEqualToString:ENGLISH_LANGUAGE]) {
+                                 if ([englishFileNameVersion isEqualToString:@"BMSM"]) {
+                                     course = [self focusSelectedCourse:[NSMutableString stringWithString:@"Book of Mormon"]];
+                                 }
+                                 else if ([englishFileNameVersion isEqualToString:[NSMutableString stringWithString:@"DCSM"]]) {
+                                     course = [self focusSelectedCourse:[NSMutableString stringWithString:@"D & C"]];
+                                 }
+                                 else if ([englishFileNameVersion isEqualToString:@"OTSM"]) {
+                                     course = [self focusSelectedCourse:[NSMutableString stringWithString:@"Old Testament"]];
+                                 }
+                                 else if ([englishFileNameVersion isEqualToString:@"NTSM"]) {
+                                     course = [self focusSelectedCourse:[NSMutableString stringWithString:@"New Testament"]];
+                                 }
+                             }
+                             else if ([language isEqualToString:SPANISH_LANGUAGE] ) {
+                                 if ([spanishFileNameVersion isEqualToString:@"BMSMSPAN"]) {
+                                     course = [self focusSelectedCourse:[NSMutableString stringWithString:@"Book of Mormon"]];
+                                 }
+                                 else if ([spanishFileNameVersion isEqualToString:@"DCSMSPAN"]) {
+                                     course = [self focusSelectedCourse:[NSMutableString stringWithString:@"D & C"]];
+                                 }
+                                 else if ([spanishFileNameVersion isEqualToString:@"OTSMSPAN"]) {
+                                     course = [self focusSelectedCourse:[NSMutableString stringWithString:@"Old Testament"]];
+                                 }
+                                 else if ([spanishFileNameVersion isEqualToString:@"NTSMSPAN"]) {
+                                     course = [self focusSelectedCourse:[NSMutableString stringWithString:@"New Testament"]];
+                                 }
+                             } else {
+                                 if ([englishFileNameVersion isEqualToString:@"BMSMPORT"]) {
+                                     course = [self focusSelectedCourse:[NSMutableString stringWithString:@"Book of Mormon"]];
+                                 }
+                                 else if ([englishFileNameVersion isEqualToString:@"DCSMPORT"]) {
+                                     course = [self focusSelectedCourse:[NSMutableString stringWithString:@"D & C"]];
+                                 }
+                                 else if ([englishFileNameVersion isEqualToString:@"OTSMPORT"]) {
+                                     course = [self focusSelectedCourse:[NSMutableString stringWithString:@"Old Testament"]];
+                                 }
+                                 else if ([englishFileNameVersion isEqualToString:@"NTSMPORT"]) {
+                                     course = [self focusSelectedCourse:[NSMutableString stringWithString:@"New Testament"]];
+                                 }
+                             }
+                             
+                             joinWatchersMessageOnce = [NSString stringWithFormat:@"%@",[plistDataDict objectForKey:@"Subscribe"]];
+                         }
+                         
+                         if (([joinWatchersMessageOnce intValue] == 0) && ([language rangeOfString:@"NoLanguageSelected"].location != NSNotFound)) {
+                         }
+                         else {
+                             // Do any additional setup after loading the view from its nib.
+                             swipeLeftRecognizer = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(swipeDetected:)];
+                             swipeLeftRecognizer.direction = UISwipeGestureRecognizerDirectionLeft;
+                             [self.view addGestureRecognizer:swipeLeftRecognizer];
+                             
+                             swipeRightRecognizer = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(swipeDetected:)];
+                             swipeRightRecognizer.direction = UISwipeGestureRecognizerDirectionRight;
+                             [self.view addGestureRecognizer:swipeRightRecognizer];
+                             
+                             [self addObservers];
+                             
+                             if (layerArray) {
+                                 self.layerArray = nil;
+                             }
+                             
+                             if (viewArray) {
+                                 self.viewArray = nil;
+                             }
+                             
+                             layerArray         = [[NSMutableArray alloc]init];
+                             viewArray          = [[NSMutableArray alloc]init];
+                             missingWordArray   = [[NSMutableArray alloc]init];
+                             
+                             [self doParse:fileName];
+                             
+                             words = [NSArray arrayWithArray:[self parseVerse:0]];
+                             
+                             for (int i=0; i<[words count]; i++) {
+                                 [missingWordArray addObject:[NSNumber numberWithInteger:0]];
+                             }
+                             
+                             [mainScrollView addSubview:[self createScriptureLayout:words contentView:self.view]];
+                             
+                             [self.view addSubview:mainScrollView];
+                             
+                             [mainScrollView bringSubviewToFront:self.view];
+                             
+                             [UIView beginAnimations:nil context:nil];
+                             [UIView setAnimationDuration:.25f];
+                             eraserImageView.alpha = 0.0;
+                             
+                             [UIView commitAnimations];
+                             
+                             if (![course rangeOfString:@"DOCTRINE AND COVENANTS"].location > 0) {
+                                 smCurrentCourseOfStudyLabel.text = [self abbreviateDoctrineAndCovenants];
+                             }
+                             else {
+                                 if ([course rangeOfString:@"DOCTRINE AND COVENANTS"].location > 0) {
+                                     smCurrentCourseOfStudyLabel.font = [UIFont systemFontOfSize:28];
+                                     smCurrentCourseOfStudyLabel.text = [NSString stringWithFormat:@"%@",currentChapterVerse];
+                                 }
+                             }
+                         }
+                     }];
+    
+    [NSTimer scheduledTimerWithTimeInterval:1.25 target:self selector:@selector(hideEraserView) userInfo:nil repeats:NO];
+    
+    [smCurrentCourseOfStudyLabel bringSubviewToFront:self.view];
+}
+
+- (void) hideEraserView {
+    eraserCoverUpView.hidden = YES;
+    
+    [eraserImageView removeFromSuperview];
+    
+    eraserImageView = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"EraserButtonImageHorz.png"]];
+    
+    if (UIInterfaceOrientationIsLandscape([[UIApplication sharedApplication] statusBarOrientation])) {
+        eraserImageView.frame = eraserLandRect;
+    }
+    else {
+        eraserImageView.frame = eraserPortRect;
+    }
+    
+    [self.view addSubview:eraserImageView];
+}
+
+- (NSMutableString *) courseOfStudyFileName {
+    if ([language isEqualToString:ENGLISH_LANGUAGE] ) {
+        return englishFileNameVersion;
+    }
+    else if([language isEqualToString:SPANISH_LANGUAGE]) {
+        return spanishFileNameVersion;
+    }
+    else {// Portuguese
+        return portugueseFileNameVersion;
+    }
+}
+
+- (void)didReceiveMemoryWarning{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
+    if (alertView.tag == 1) {
+        switch (buttonIndex) {
+            case 0: // PORTUGUESE
+                defaultFilename = @"BMSMPORT";;
+                language = [[NSMutableString alloc]initWithString:PORTUGUESE_LANGUAGE];
+                break;
+            case 1:// ENGLISH
+                defaultFilename = @"BMSM";
+                language = [[NSMutableString alloc]initWithString:ENGLISH_LANGUAGE];
+                break;
+            case 2: // SPANISH
+                defaultFilename = @"BMSMSPAN";
+                language = [[NSMutableString alloc]initWithString:SPANISH_LANGUAGE];
+                break;
+            default:
+                break;
+        }
+        
+        [self doParse:defaultFilename];
+        
+        words = [NSArray arrayWithArray:[self parseVerse:0]];
+        
+        if ([[CourseOfStudyViewController courseSelected] length] == 0) {
+            course = [self focusSelectedCourse:[NSMutableString stringWithString:@"Book of Mormon"]];
+        }
+        else
+            course = [CourseOfStudyViewController courseSelected];
+        
+        if (![course rangeOfString:@"DOCTRINE AND COVENANTS"].location > 0) {
+            smCurrentCourseOfStudyLabel.text = [self abbreviateDoctrineAndCovenants];
+        }
+        else
+            smCurrentCourseOfStudyLabel.text = [NSString stringWithFormat:@"%@ | %@",course,currentChapterVerse];
+        
+        for (int i=0; i<[words count]; i++) {
+            [missingWordArray addObject:[NSNumber numberWithInteger:0]];
+        }
+        
+        [DataModelHandler writePlistData:@"Parameters" arrayWithObjects:[[NSArray alloc]initWithObjects:language,@"1", nil] arrayWithKeys:[[NSArray alloc]initWithObjects:@"Language",@"Subscribe", nil]];
+        
+        [mainScrollView addSubview:[self createScriptureLayout:words contentView:self.view]];
+    }
+}
+
+- (NSString *) abbreviateDoctrineAndCovenants {    
+    return [NSString stringWithFormat:@"D&C | %@",currentChapterVerse];
+}
+
+- (IBAction) tabBarButtonPressed:(id)sender {
+    switch ([sender tag]) {
+        case 0:// Scripture Mastery
+            break;
+        case 1: // concentration
+            if (!concentrationViewController) {
+                concentrationViewController = [[ConcentrationViewController alloc] initWithNibName:@"ConcentrationViewController" bundle:nil];
+            }
+            
+            [self presentViewController:concentrationViewController animated:YES completion:nil];
+            break;
+        case 2: // pass off tracker
+            if (!smPassOffTrackerViewController) {
+            smPassOffTrackerViewController = [[SMPassOffTrackerViewController alloc] initWithNibName:@"SMPassOffTrackerViewController" bundle:nil];
+            }
+            
+            [self presentViewController:smPassOffTrackerViewController animated:YES completion:nil];
+            break;
+        case 3: // QUIZ
+            if (!quizViewController) {
+                quizViewController = [[QuizViewController alloc] initWithNibName:@"QuizViewController" bundle:nil];
+            }
+            
+            [self presentViewController:quizViewController animated:YES completion:nil];
+            break;
+        case 4: // more
+            if (!moreViewController) {
+                moreViewController = [[MoreSplitViewController alloc] initWithNibName:@"MoreSplitViewController" bundle:nil];
+            }
+            
+            [self presentViewController:moreViewController animated:YES completion:nil];
+            break;
+        default:
+            break;
+    }
+    
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
+
++ (NSMutableArray *)allChapterAndVerses {
+    allChapterVerses = [[NSMutableArray alloc]initWithCapacity:[scriptureVerses count]];
+    
+    for (int i=0; i<[scriptureVerses count]; i++) {
+        
+        Scriptures *s = [scriptureVerses objectAtIndex:i];
+        
+        [allChapterVerses addObject:s.chapterVerse];
+    }
+    
+    return allChapterVerses;
+}
+
++ (NSMutableArray *)allChapterVerseHeadings {
+    allChapterVerseHeadings = [[NSMutableArray alloc]initWithCapacity:[scriptureVerses count]];
+    
+    for (int i=0; i<[scriptureVerses count]; i++) {
+        
+        Scriptures *s = [scriptureVerses objectAtIndex:i];
+        
+        [allChapterVerseHeadings addObject:s.chapterVerseHeading];
+    }
+    
+    return allChapterVerseHeadings;
+}
+
+- (void) chapterVerseSelected:(NSNotification *) notification {
+    if ([[notification name] isEqualToString:@"ChapterVerseSelectedNotification"]) {
+        NSMutableDictionary *dict = [notification object];
+        NSIndexPath *indexPath = [dict objectForKey:@"indexPath"];
+        NSInteger row = indexPath.row;
+        
+        if ([words count] > 0) {
+            words = nil;
+        }
+                
+        words = [NSArray arrayWithArray:[self parseVerse:row]];
+        
+        if ([missingWordArray count] > 0) {
+            missingWordArray = nil;
+            
+            missingWordArray    = [[NSMutableArray alloc]init];
+            
+            for (int i=0; i<[words count]; i++) {
+                [missingWordArray addObject:[NSNumber numberWithInteger:0]];
+            }
+        }
+        
+        [mainScrollView addSubview:[self createScriptureLayout:words contentView:self.view]];
+        
+        [searchPopoverController dismissPopoverAnimated:YES];
+        
+        if (![course rangeOfString:@"DOCTRINE AND COVENANTS"].location > 0) {
+            smCurrentCourseOfStudyLabel.text = [self abbreviateDoctrineAndCovenants];
+        }
+        else
+            smCurrentCourseOfStudyLabel.text = [NSString stringWithFormat:@"%@ | %@",course,currentChapterVerse];
+    }
+}
+
+- (IBAction)restoreScriptureButtonPressed:(id)sender {
+    for (int i=0; i<[layerArray count]; i++) {
+        [[layerArray objectAtIndex:i]setHidden:NO];
+        [[layerArray objectAtIndex:i] setForegroundColor:[[UIColor blackColor] CGColor]];
+        [[layerArray objectAtIndex:i] setBorderColor:[UIColor whiteColor].CGColor];
+        [[layerArray objectAtIndex:i] setBorderWidth:0.0];
+        [[viewArray objectAtIndex:i]setTag:i];
+        
+        [missingWordArray replaceObjectAtIndex:i withObject:[NSNumber numberWithInteger:0]];
+    }
+}
+
+- (UIView *) createScriptureLayout:(NSArray *)words contentView:(UIView *)contentView {
+    NSInteger charHeight = 25;
+    NSInteger row = 0;
+    NSInteger space = 12;
+    
+    float previousPos = 0;
+    
+    if (scriptureLayoutView) {
+        [scriptureLayoutView removeFromSuperview];
+        
+        if ([layerArray count] > 0) {
+            [layerArray removeAllObjects];
+            [viewArray removeAllObjects];
+        }        
+    }
+    if(fromPort) {
+        //do somthing or rather
+     //   if (fromConcentration) {
+     //       scriptureLayoutView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, 670, 440)];
+     //   }
+     //   else
+            scriptureLayoutView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, 650, 440)];
+        
+        fromConcentration = NO;
+    }
+    if (fromLand) {
+   //     if (showSearchPopoverSelected) {
+   //         scriptureLayoutView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, 915, 375)];
+   //         showSearchPopoverSelected = NO;
+   //     }
+   //     else {
+            scriptureLayoutView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, 885, 300)];
+   //     }
+    }
+    
+    for (int i=0; i < [words count]; i++)
+    {
+        CGFloat widthOfStr = [self widthOfString:[words objectAtIndex:i] withFont:[UIFont fontWithName:@"Helvetica" size:20.0]];
+        
+        label = [[CATextLayer alloc] init];
+        [label setFont:@"Helvetica-Bold"];
+        [label setFontSize:20];
+        
+      //  scriptureLayoutView.layer.borderColor = [UIColor greenColor].CGColor;
+      //  scriptureLayoutView.layer.borderWidth = 1.0;
+
+        if (previousPos + widthOfStr > scriptureLayoutView.frame.size.width) {
+            row+=charHeight;
+            
+            previousPos = 0;
+        }
+        
+        [label setFrame:CGRectMake(previousPos, row, widthOfStr + space, charHeight)];
+        [label setString:[words objectAtIndex:i]];
+        
+        if ([[missingWordArray objectAtIndex:i]integerValue] == 0) {// not tapped
+            [label setForegroundColor:[[UIColor blackColor] CGColor]];
+        }
+        else if([[missingWordArray objectAtIndex:i]integerValue] == 1) { //  dhw was == 2 tapped/missing with a border around space
+            [label setBorderColor:[UIColor blackColor].CGColor];
+            [label setBorderWidth:1.0];
+        }
+        else {
+            [label setForegroundColor:[[UIColor clearColor] CGColor]];
+        }
+        
+        layerButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        layerButton.tag = i;
+        layerButton.frame = CGRectMake(previousPos, row, widthOfStr + space, charHeight);
+        [layerButton addTarget:self action:@selector(buttonTapped:) forControlEvents:UIControlEventTouchUpInside];
+        
+        [scriptureLayoutView.layer addSublayer:label];
+        
+        [scriptureLayoutView addSubview:layerButton];
+        
+        previousPos = label.frame.origin.x + label.frame.size.width + 5;
+        
+        [viewArray addObject:layerButton];
+        [layerArray addObject:label];
+    }
+    
+    return scriptureLayoutView;
+}
+
+- (IBAction)buttonTapped:(id)sender {
+    animationImageView = [[UIImageView alloc]initWithFrame:CGRectMake([(UIButton *)sender frame].origin.x, [(UIButton *)sender frame].origin.y + [(UIButton *)sender frame].size.height, 92, 96)];
+
+    for (int i=0; i<[viewArray count]; i++) {
+        if ([sender tag] == i) {
+            curIndex = i;
+            if ([[missingWordArray objectAtIndex:i]integerValue] == 1) { // reset to normal
+                [[layerArray objectAtIndex:curIndex] setForegroundColor:[[UIColor blackColor] CGColor]];
+                [[layerArray objectAtIndex:curIndex] setBorderColor:[UIColor whiteColor].CGColor];
+                [[layerArray objectAtIndex:curIndex] setBorderWidth:0.0];
+                                
+                [missingWordArray replaceObjectAtIndex:curIndex withObject:[NSNumber numberWithInteger:0]];
+                break;
+            }
+            else {// process animations
+                [[layerArray objectAtIndex:curIndex] setForegroundColor:[[UIColor whiteColor] CGColor]];
+                [[layerArray objectAtIndex:curIndex] setBorderColor:[UIColor blackColor].CGColor];
+                [[layerArray objectAtIndex:curIndex] setBorderWidth:1.0];
+
+                [missingWordArray replaceObjectAtIndex:curIndex withObject:[NSNumber numberWithInteger:1]];
+                
+                break;
+            }
+        }
+    }    
+}
+
+- (CGFloat)widthOfString:(NSString *)string withFont:(UIFont *)font {
+    float version = [[[UIDevice currentDevice] systemVersion] floatValue];
+
+    if (version < 6.0) {
+        /* Create the attributes (for the attributed string) */
+        if ([string length]) {
+            return [string length] * 12;// most characters are 12 pixels wide - very much a hack
+        }
+    }
+    else { // iOS 6.x +
+        NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:font, NSFontAttributeName, nil];
+        NSAttributedString *attrStr = [[NSAttributedString alloc] initWithString:string attributes:attributes];
+        return [attrStr size].width;
+    }
+    return 0;
+}
+
+- (IBAction)showPopover:(id)sender {
+    if(![courseOfStudyPopoverController isPopoverVisible]){
+        courseOfStudyViewController = [[CourseOfStudyViewController alloc]init];
+		courseOfStudyPopoverController = [[UIPopoverController alloc] initWithContentViewController:courseOfStudyViewController];
+		
+		[courseOfStudyPopoverController setPopoverContentSize:CGSizeMake(240.0f, 350.0f)];
+		[courseOfStudyPopoverController presentPopoverFromBarButtonItem:sender permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
+	}else{
+		[courseOfStudyPopoverController dismissPopoverAnimated:YES];
+        courseOfStudyViewController = nil;
+	}
+}
+
+- (IBAction)showSearchPopover:(id)sender {
+    if(![searchPopoverController isPopoverVisible]){
+        searchIndexViewController = [[SearchIndexViewController alloc]init];
+		searchPopoverController = [[UIPopoverController alloc] initWithContentViewController:searchIndexViewController];
+		
+		[searchPopoverController setPopoverContentSize:CGSizeMake(240.0f, 350.0f)];
+		[searchPopoverController presentPopoverFromBarButtonItem:versesBarButtonItem permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
+        
+		// Or use the following line to display it from a given rectangle
+        showSearchPopoverSelected = YES;
+	}else{
+		[searchPopoverController dismissPopoverAnimated:YES];
+        
+        searchIndexViewController = nil;
+	}
+}
+
+- (void) doParse:(NSString *)plistFileName {
+    parser = [[SnI_XMLParser alloc] initXMLParser:plistFileName];
+}
+
+- (NSArray *) parseVerse:(NSInteger) verseIdx{
+    // get the first scripture object
+    // then go to the verse property and parse it
+    Scriptures *s = [parser.versesContent objectAtIndex:verseIdx];
+    Scriptures *cv = [parser.chapterVerse objectAtIndex:verseIdx];
+    
+    NSArray *verseWords = [s.verse componentsSeparatedByString:@" "];
+    
+    currentChapterVerse = [[NSMutableString alloc]initWithString:cv.chapterVerse];
+    
+    scriptureVerses = [NSMutableArray arrayWithArray:parser.chapterVerse];
+    
+    return verseWords;
+}
+
+- (void)addObservers {
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(courseOfStudySelected:)
+                                                 name:@"CourseSelectedNotification"
+                                               object:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(chapterVerseSelected:)
+                                                 name:@"ChapterVerseSelectedNotification"
+                                               object:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(scriptureMasteryFromConcentration:)
+                                                 name:@"SMFromConcentrationNotification"
+                                               object:nil];
+    
+}
+
+- (void) removeObservers {
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:@"CourseSelectedNotification" object:nil];
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:@"ChapterVerseSelectedNotification" object:nil];
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:@"SMFromConcentrationNotification" object:nil];
+    
+}
+
+- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
+    if (cosSelected) {
+        [self createScrollView:fromInterfaceOrientation];
+        
+        [self.view addSubview:mainScrollView];
+        
+        [mainScrollView bringSubviewToFront:self.view];
+        
+        [mainScrollView addSubview:[self createScriptureLayout:words contentView:self.view]];
+    }
+}
+
+- (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
+    mainScreenWidth     = [[UIScreen mainScreen]bounds].size.width;
+    mainScreenHeight    = [[UIScreen mainScreen]bounds].size.height;
+    
+    [eraserImageView removeFromSuperview];
+        
+    fromRotate = YES;
+        
+    [self createWipeOffBoardWithTray:showCourseOfStudyButtons];
+    
+    if(toInterfaceOrientation==UIInterfaceOrientationPortrait ||toInterfaceOrientation==UIInterfaceOrientationPortraitUpsideDown) {
+        fromPort = YES;
+        fromLand = NO;
+
+        [self layoutSMDashboardForPort];
+    }
+    else { // landscape
+        fromPort = NO;
+        fromLand = YES;
+        
+        [self layoutSMDashboardForLand];
+    }
+}
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return YES;
+}
+
+- (void)swipeDetected:(UISwipeGestureRecognizer *)swipeRecognizer {
+    //Touch gestures below top bar should not make the page turn.
+    //EDITED Check for only Tap here instead.
+    if (swipeRecognizer.direction == UISwipeGestureRecognizerDirectionRight) {
+        if (currentViewIndex > 0) {
+            currentViewIndex--;
+        }
+    }
+    
+    if (swipeRecognizer.direction == UISwipeGestureRecognizerDirectionLeft) {
+        if (currentViewIndex < [words count]) {
+            currentViewIndex++;
+        }
+    }
+    
+    words = [NSArray arrayWithArray:[self parseVerse:currentViewIndex]];
+    
+    course = [CourseOfStudyViewController courseSelected];
+    
+    if ([[CourseOfStudyViewController courseSelected] length] == 0) {
+        course = [NSMutableString stringWithFormat:@"%@ | %@",smCurrentCourseOfStudyLabel.text,currentChapterVerse];
+        return;
+    }
+    
+    if (![course rangeOfString:@"DOCTRINE AND COVENANTS"].location > 0) {
+        smCurrentCourseOfStudyLabel.text = [self abbreviateDoctrineAndCovenants];
+    }
+    else
+        smCurrentCourseOfStudyLabel.text = [NSString stringWithFormat:@"%@ | %@",course,currentChapterVerse];
+
+    [mainScrollView addSubview:[self createScriptureLayout:words contentView:self.view]];
+}
+
+- (void) scriptureMasteryFromConcentration:(NSNotification *) notification {
+    if ([[notification name] isEqualToString:@"SMFromConcentrationNotification"]) {
+        
+        UIInterfaceOrientation orientation = [[UIDevice currentDevice] orientation];
+        if ((UIInterfaceOrientationIsLandscape([[UIApplication sharedApplication] statusBarOrientation]))|(orientation == UIInterfaceOrientationLandscapeLeft)) {
+            fromLand = YES;
+            fromPort = NO;
+        }
+        else {
+            fromLand = NO;
+            fromPort = YES;
+        }
+        fromConcentration = YES;
+    }
+}
+
+- (IBAction)backBarButtonItemPressed:(id)sender {
+    [mainScrollView removeFromSuperview];
+    mainScrollView = nil;
+    
+    cosSelected = NO;
+    
+    fromRotate = NO;
+    
+    showCourseOfStudyButtons = YES;
+    
+    [UIView commitAnimations];
+    [UIView animateWithDuration: 1
+                          delay: 0
+                        options: UIViewAnimationCurveEaseInOut
+                     animations:^{
+                         [UIView beginAnimations:nil context:nil];
+                         [UIView setAnimationDuration:1.0f];
+                         topScriptureMasteryToolbarWithItems.hidden              = YES;
+                         topScriptureMasteryToolbarWithoutItems.hidden           = NO;
+                         bookOfMormonButton.alpha                                = 1.0;
+                         doctrineNCovenantsButton.alpha                          = 1.0;
+                         oldTestamentButton.alpha                                = 1.0;
+                         knewTestamentButton.alpha                               = 1.0;
+                         scriptureMasteryCourseOfStudyDashboardImageView.alpha   = 1.0;
+                         scriptureLayoutView.alpha = 0.0;
+                         
+                         [eraserCoverUpView removeFromSuperview];
+                         [titleLabel setText:[LocalizedHelper languageSelectedStringForKey:@"memCourseOfStudy"]];
+                         [smCurrentCourseOfStudyLabel setText:[LocalizedHelper languageSelectedStringForKey:@"memCourseOfStudy"]];
+                         
+                         [UIView commitAnimations];
+                     }
+                     completion:^(BOOL finished){
+                         if (eraserImageView) {
+                             [eraserImageView removeFromSuperview];
+                         }
+                         
+                         if (UIInterfaceOrientationIsLandscape([[UIApplication sharedApplication] statusBarOrientation])) {
+                             mainScrollView.frame = CGRectMake(70, 480, mainScrollView.frame.size.width + 200, mainScrollView.frame.size.height);
+                             
+                             [self layoutSMDashboardForLand];
+                         }
+                         else {
+                             mainScrollView.frame = CGRectMake(56, 282, mainScrollView.frame.size.width, mainScrollView.frame.size.height);
+                             
+                             [self layoutSMDashboardForPort];
+                         }
+                     }];
+    
+    [self.view addSubview:bookOfMormonButton];
+    [self.view addSubview:doctrineNCovenantsButton];
+    [self.view addSubview:oldTestamentButton];
+    [self.view addSubview:knewTestamentButton];
+    
+    [bookOfMormonButton bringSubviewToFront:self.view];
+    [bookOfMormonButton setHidden:NO];
+    [doctrineNCovenantsButton bringSubviewToFront:self.view];
+    [doctrineNCovenantsButton setHidden:NO];
+    [oldTestamentButton bringSubviewToFront:self.view];
+    [oldTestamentButton setHidden:NO];
+    [knewTestamentButton bringSubviewToFront:self.view];
+    [knewTestamentButton setHidden:NO];
+    
+}
+
+- (void) layoutSMDashboardForPort {
+    if (eraserImageView == nil) {
+        [eraserImageView removeFromSuperview];
+    }
+        
+    eraserImageView = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"EraserButtonImageHorz.png"]];
+    eraserImageView.frame = eraserPortRect;
+    [self.view addSubview:eraserImageView];
+    
+    bookOfMormonButton.frame = CGRectMake(portXPos, kBookOfMormonButtonYPos, portBtnWidth, 65);
+    
+    doctrineNCovenantsButton.frame = CGRectMake(portXPos, kDoctrineNCovenantsButtonYPos, portBtnWidth, 65);
+    
+    oldTestamentButton.frame = CGRectMake(portXPos, kOldTestamentButtonYPos, portBtnWidth, 65);
+    
+    knewTestamentButton.frame = CGRectMake(portXPos, kNewTestamentButtonYPos, portBtnWidth, 65);    
+}
+
+- (void) layoutSMDashboardForLand {    
+    if (eraserImageView == nil) {
+        [eraserImageView removeFromSuperview];
+    }
+    
+    eraserImageView = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"EraserButtonImageHorz.png"]];
+    eraserImageView.frame = eraserLandRect;
+    [self.view addSubview:eraserImageView];
+    
+    bookOfMormonButton.frame = CGRectMake(landXPos, 225, landBtnWidth, 65);
+    
+    doctrineNCovenantsButton.frame = CGRectMake(landXPos, bookOfMormonButton.frame.origin.y + bookOfMormonButton.frame.size.height + 5, landBtnWidth, 65);
+    
+    oldTestamentButton.frame = CGRectMake(landXPos, doctrineNCovenantsButton.frame.origin.y + doctrineNCovenantsButton.frame.size.height + 5, landBtnWidth, 65);
+    
+    knewTestamentButton.frame = CGRectMake(landXPos, oldTestamentButton.frame.origin.y + oldTestamentButton.frame.size.height + 5, landBtnWidth, 65);    
+}
+
+@end
