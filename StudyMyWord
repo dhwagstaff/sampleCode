@@ -1,0 +1,314 @@
+//
+//  QuizTableViewViewController.m
+//  MasterTheVerse
+//
+//  Created by CTO on 12/5/13.
+//  Copyright (c) 2013 Wagstaff, Dean. All rights reserved.
+//
+
+#import "QuizTableViewViewController.h"
+#import "Scriptures.h"
+#import "SolutionsPickerViewController.h"
+
+@interface QuizTableViewViewController ()
+@property (strong, nonatomic) UILabel                       *chapterVerseLabel;
+@property (strong, nonatomic) UILabel                       *answerLabel;
+@property (strong, nonatomic) UIButton                      *solveButton;
+@property (nonatomic, strong) UILabel                       *referenceLabel;
+@property (nonatomic, strong) NSMutableArray                *chapterVerseLabelArray;
+@property (nonatomic, strong) NSMutableArray                *referenceLabelArray;
+@property (nonatomic, strong) NSMutableArray                *answerLabelArray;
+@property (nonatomic, strong) NSMutableArray                *answerMaskArray;
+@property (nonatomic, strong) NSMutableArray                *customCheckboxArray;
+@property (nonatomic, unsafe_unretained) NSInteger          selectedRow;
+@property (nonatomic, strong) NSMutableString               *answerLetter;
+@property (nonatomic, strong) Scriptures                    *script;
+@property (nonatomic, unsafe_unretained) NSInteger          asciiCode;
+@property (nonatomic, unsafe_unretained) NSInteger          solutionButtonIndex;
+@property (nonatomic, strong) IBOutlet UITableView          *allSMTableView;
+@property (nonatomic, strong) UIPopoverController           *solutionsPickerPopoverController;
+@property (nonatomic, strong) SolutionsPickerViewController *solutionsPickerViewController;
+@property (nonatomic, strong) IBOutlet UINavigationItem     *navBarItem;
+@end
+
+@implementation QuizTableViewViewController
+@synthesize chapterVerseLabel                   = _chapterVerseLabel;
+@synthesize answerLabel                         = _answerLabel;
+@synthesize solveButton                         = _solveButton;
+@synthesize referenceLabel                      = _referenceLabel;
+@synthesize chapterVerseLabelArray              = _chapterVerseLabelArray;
+@synthesize referenceLabelArray                 = _referenceLabelArray;
+@synthesize answerLabelArray                    = _answerLabelArray;
+@synthesize answerMaskArray                     = _answerMaskArray;
+@synthesize scriptureVerses                     = _scriptureVerses;
+@synthesize customCheckboxArray                 = _customCheckboxArray;
+@synthesize selectedRow                         = _selectedRow;
+@synthesize answerLetter                        = _answerLetter;
+@synthesize script                              = _script;
+@synthesize asciiCode                           = _asciiCode;
+@synthesize allChapterVerseHeadings             = _allChapterVerseHeadings;
+@synthesize chapterVerseHeadingsArray           = _chapterVerseHeadingsArray;
+@synthesize solutionButtonIndex                 = _solutionButtonIndex;
+@synthesize allSMTableView                      = _allSMTableView;
+@synthesize solutionsPickerPopoverController    = _solutionsPickerPopoverController;
+@synthesize solutionsPickerViewController       = _solutionsPickerViewController;
+@synthesize navBarItem                          = _navBarItem;
+@synthesize tableItemLabel                      = _tableItemLabel;
+@synthesize quizTitle                           = _quizTitle;
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    
+    if (self) {
+        // Custom initialization
+        _asciiCode = 65;
+        
+        _answerLetter = [NSMutableString stringWithString:@"_"];
+        
+        _answerMaskArray        = [[NSMutableArray alloc]initWithCapacity:25];
+        _customCheckboxArray    = [[NSMutableArray alloc]initWithCapacity:25];
+        _chapterVerseLabelArray = [[NSMutableArray alloc]initWithCapacity:25];
+        _referenceLabelArray    = [[NSMutableArray alloc]initWithCapacity:25];
+        _answerLabelArray       = [[NSMutableArray alloc]initWithCapacity:25];
+                
+        for (int i=0; i<25; i++) {
+            [_customCheckboxArray addObject:[NSNumber numberWithInteger:0]];
+            [_answerMaskArray addObject:[NSNumber numberWithInteger:0]];
+        }
+    }
+    
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(handleAnswerQuizNotification:)
+                                                 name:@"HandleAnswerQuizNotification"
+                                               object:nil];
+    
+    _tableItemLabel.text = _quizTitle;
+    
+    _selectedRow = -1;
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+- (NSInteger) numberOfSectionsInTableView:(UITableView *)tableView {
+    return 1;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    // Navigation logic may go here. Create and push another view controller.
+    /*
+     <#DetailViewController#> *detailViewController = [[<#DetailViewController#> alloc] initWithNibName:@"<#Nib name#>" bundle:nil];
+     // ...
+     // Pass the selected object to the new view controller.
+     [self.navigationController pushViewController:detailViewController animated:YES];
+     [detailViewController release];
+     */
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return 25;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+    return 35;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    static NSString *cId = @"custCellExt";
+    
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cId];
+    
+    // No cell available - create one.
+    if(cell == nil) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault
+                                            reuseIdentifier:cId];
+        
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        
+        self.chapterVerseLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 0.0, 300, 30)];
+        self.chapterVerseLabel.textAlignment = NSTextAlignmentLeft;
+        self.chapterVerseLabel.font = [UIFont boldSystemFontOfSize:12.0];
+        self.chapterVerseLabel.backgroundColor = [UIColor clearColor];
+        
+        self.answerLabel = [[UILabel alloc] initWithFrame:CGRectMake(460, 0.0, 300, 30)];
+        self.answerLabel.textAlignment = NSTextAlignmentCenter;
+        self.answerLabel.font = [UIFont boldSystemFontOfSize:12.0];
+        self.answerLabel.backgroundColor = [UIColor clearColor];
+        
+        self.referenceLabel = [[UILabel alloc] initWithFrame:CGRectMake(275, 0.0, 375, 30)];
+        self.referenceLabel.textAlignment = NSTextAlignmentLeft;
+        self.referenceLabel.font = [UIFont boldSystemFontOfSize:12.0];
+        self.referenceLabel.backgroundColor = [UIColor clearColor];
+        
+        [_chapterVerseLabelArray addObject:self.chapterVerseLabel];
+        [_referenceLabelArray addObject:self.referenceLabel];
+        [_answerLabelArray addObject:self.answerLabel];
+        
+        if ([[_answerMaskArray objectAtIndex:indexPath.row]integerValue] == 1) {
+            [self.answerLabel setText:@"CORRECT"];
+            [self.answerLabel setTextColor:[UIColor greenColor]];
+        }
+        else {
+            [self.answerLabel setText:@""];
+            [self.answerLabel setTextColor:[UIColor clearColor]];
+        }
+        
+        _solveButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        [_solveButton setFrame:CGRectMake(660, 0, 40, 32)];
+        [_solveButton setImage:[UIImage imageNamed:@"solveButtonImage.png"] forState:UIControlStateNormal];
+        [_solveButton addTarget:self action:@selector(solveButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+        
+        if ([_scriptureVerses count] > 0) {
+            _script = [_scriptureVerses objectAtIndex:indexPath.row];
+            
+            NSInteger rowNumber = indexPath.row + 1;
+            
+            [_chapterVerseLabel setText:[NSString stringWithFormat:@"%d.\t\t  %@",rowNumber, _script.chapterVerse]];
+            
+            NSMutableString *chapVerseHeadStr = [NSMutableString stringWithFormat:@"%c.  %@",_asciiCode,[_chapterVerseHeadingsArray objectAtIndex:indexPath.row]];
+            
+            [_referenceLabel setText:chapVerseHeadStr];
+            
+            [_solveButton setTag:indexPath.row];            
+        }
+        
+        [cell.contentView addSubview:_solveButton];
+        [cell.contentView addSubview:_referenceLabel];
+        [cell.contentView addSubview:self.answerLabel];
+        [cell.contentView addSubview:self.chapterVerseLabel];
+        
+        _asciiCode += 1;
+    }
+    
+    return cell;
+}
+
+- (void) handleAnswerQuizNotification:(NSNotification *) notification {
+    if ([[notification name] isEqualToString:@"HandleAnswerQuizNotification"]) {
+        // steps : 1 - use row to get strings from both array of the master arrays
+        //         2 - compare the master strings to the objects from the notifications
+        //             strings passed in.
+        //         3 - if match winner / if not try again.
+        NSString *msg = nil;
+        NSDictionary *noteDict = (NSDictionary *)[notification object];
+        
+        _selectedRow = [[noteDict objectForKey:@"selectedRow"]integerValue];
+        
+        _script = [_scriptureVerses objectAtIndex:_selectedRow];
+        
+        NSString *masterChVerseHeadings = [NSString stringWithString:[_allChapterVerseHeadings objectAtIndex:_selectedRow]];
+        NSString *masterChVerses        = [NSString stringWithString:_script.chapterVerse];
+        
+        NSMutableString *selChVsHeading = [NSMutableString stringWithFormat:@"%@",[(NSDictionary *)[notification object]objectForKey:@"selectedChapterVerseHeading"]];
+        
+        if ([masterChVerseHeadings isEqualToString:selChVsHeading]) {
+            if ([masterChVerses isEqualToString:[(NSDictionary *)[notification object]objectForKey:@"selectedChapterVerse"]]) {
+                msg = @"CORRECT";
+                
+                // swap the label text/verse from the currently selected to the correct chapter verse heading
+                
+                // letter A,B,C ...
+                UILabel *selectedChapterVerseHeadingLbl = [_referenceLabelArray objectAtIndex:_solutionButtonIndex];
+                NSMutableString *answer = [NSMutableString stringWithFormat:@"%@",[selectedChapterVerseHeadingLbl text]];
+                _answerLetter = [NSMutableString stringWithString:[[selectedChapterVerseHeadingLbl text]substringToIndex:1]];
+                [_answerMaskArray replaceObjectAtIndex:_selectedRow withObject:[NSNumber numberWithInteger:1]];
+                
+                UILabel *selectedChapterVerseLabel = [_referenceLabelArray objectAtIndex:_selectedRow];
+                NSMutableString *swapWithLabelText = [NSMutableString stringWithFormat:@"%@",[selectedChapterVerseLabel text]];
+                
+                [selectedChapterVerseHeadingLbl setText:swapWithLabelText];
+                
+                [selectedChapterVerseLabel setText:answer];
+                [selectedChapterVerseLabel setTextColor:[UIColor greenColor]];
+                
+                [(UILabel *)[_chapterVerseLabelArray objectAtIndex:_selectedRow]setTextColor:[UIColor greenColor]];
+                
+                NSMutableString *sourceStr  = [_chapterVerseHeadingsArray objectAtIndex:_selectedRow];
+                NSMutableString *destStr    = [_chapterVerseHeadingsArray objectAtIndex:_solutionButtonIndex];
+                
+                [_chapterVerseHeadingsArray replaceObjectAtIndex:_selectedRow withObject:destStr];
+                [_chapterVerseHeadingsArray replaceObjectAtIndex:_solutionButtonIndex withObject:sourceStr];
+                
+                _asciiCode = 65;
+                
+                [_allSMTableView reloadData];
+            }
+            else
+                msg = @"SORRY WRONG ANSWER - TRY AGAIN";
+        }
+        else
+            msg = @"SORRY WRONG ANSWER - TRY AGAIN";
+        
+        UIActionSheet *actionSheet = [[UIActionSheet alloc]
+                                      initWithTitle:[NSString stringWithFormat:@"Quiz Question Results\n\n%@",msg]
+                                      delegate:self
+                                      cancelButtonTitle:@""
+                                      destructiveButtonTitle:@"Ok"
+                                      otherButtonTitles:nil];
+        
+        [actionSheet showInView:self.view];
+    }
+}
+
+- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex{
+	// the user clicked one of the OK/Cancel buttons
+	if (buttonIndex == 0){ // continue button
+        [_solutionsPickerPopoverController dismissPopoverAnimated:YES];
+	}else if( buttonIndex == 1){ // cancel button
+	}
+}
+
+- (void) solveButtonPressed:(id)sender {
+    _solutionButtonIndex = [sender tag];
+    
+    if(![_solutionsPickerPopoverController isPopoverVisible]){
+        _solutionsPickerViewController = [[SolutionsPickerViewController alloc]initWithNibName:nil bundle:nil];
+        
+        _solutionsPickerViewController.selectedChVerseLabel.text = [_chapterVerseHeadingsArray objectAtIndex:_solutionButtonIndex];
+        [_solutionsPickerViewController.selectedChVerseLabel setText:[_chapterVerseHeadingsArray objectAtIndex:_solutionButtonIndex]];
+        _solutionsPickerViewController.chapterVerseHeading = [_chapterVerseHeadingsArray objectAtIndex:_solutionButtonIndex];
+        _solutionsPickerViewController.chapterVersesArray = _scriptureVerses;
+        
+		_solutionsPickerPopoverController = [[UIPopoverController alloc] initWithContentViewController:_solutionsPickerViewController];
+        
+		[_solutionsPickerPopoverController setPopoverContentSize:CGSizeMake(277.0f, 551.0f)];
+        //	[courseOfStudyPopoverController presentPopoverFromBarButtonItem:courseOfStudyBarButtonItem permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
+        
+        [_solutionsPickerPopoverController presentPopoverFromRect:CGRectMake(670, _solutionButtonIndex * 35, 300, 300) inView:self.view permittedArrowDirections:UIPopoverArrowDirectionRight animated:YES];
+	}else{
+		[_solutionsPickerPopoverController dismissPopoverAnimated:YES];
+	}
+}
+
+- (IBAction)quizGenBackBtnPressed:(id)sender {
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"BackButtonPressedNotification" object:sender];
+}
+
+-(BOOL)shouldAutorotate {
+    return YES;
+}
+
+-(NSUInteger)supportedInterfaceOrientations {
+    return UIInterfaceOrientationMaskPortrait | UIInterfaceOrientationMaskPortraitUpsideDown;
+}
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation{
+    return (toInterfaceOrientation == UIInterfaceOrientationPortrait) | (toInterfaceOrientation == UIInterfaceOrientationPortraitUpsideDown);
+}
+
+- (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
+    [[UIApplication sharedApplication] setStatusBarOrientation:UIInterfaceOrientationPortrait];
+}
+
+@end
